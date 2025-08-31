@@ -1,0 +1,57 @@
+version: "3.9"
+services:
+  mongo:
+    image: mongo:6
+    container_name: fx_mongo
+    restart: unless-stopped
+    ports: ["27017:27017"]
+    volumes:
+      - mongo_data:/data/db
+
+  redis:
+    image: redis:7
+    container_name: fx_redis
+    restart: unless-stopped
+    ports: ["6379:6379"]
+
+  backend:
+    build: ./backend
+    container_name: fx_backend
+    env_file: ./backend/.env.example
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017/fx_alert
+      - REDIS_URL=redis://redis:6379/0
+      - CORS_ALLOW_ORIGINS=http://localhost:5173
+    ports: ["8000:8000"]
+    depends_on: [mongo, redis]
+
+  celery_worker:
+    build: ./backend
+    container_name: fx_celery_worker
+    command: ["celery", "-A", "app.tasks.currency_tasks.celery_app", "worker", "-l", "INFO"]
+    env_file: ./backend/.env.example
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017/fx_alert
+      - REDIS_URL=redis://redis:6379/0
+    depends_on: [backend, mongo, redis]
+
+  celery_beat:
+    build: ./backend
+    container_name: fx_celery_beat
+    command: ["celery", "-A", "app.tasks.currency_tasks.celery_app", "beat", "-l", "INFO"]
+    env_file: ./backend/.env.example
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017/fx_alert
+      - REDIS_URL=redis://redis:6379/0
+    depends_on: [backend, mongo, redis]
+
+  frontend:
+    build: ./frontend
+    container_name: fx_frontend
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000/api/v1
+    ports: ["5173:80"]
+    depends_on: [backend]
+
+volumes:
+  mongo_data:
