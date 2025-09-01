@@ -1,0 +1,88 @@
+name: CI & Deploy
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ---------- Backend tests ----------
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install backend deps
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run backend tests
+        working-directory: backend
+        env:
+          # 패키지 경로 인식 (pytest에서 app.* 임포트)
+          PYTHONPATH: ${{ github.workspace }}/backend
+        run: pytest -q
+
+      # ---------- Frontend tests ----------
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run frontend tests
+        working-directory: frontend
+        run: npm test
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ---------- Deploy Frontend to Vercel ----------
+      # 사전에 GitHub 리포지토리 Secrets에 아래 3개 등록:
+      # VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
+      - name: Deploy Frontend to Vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          npm i -g vercel@latest
+          cd frontend
+          # 환경변수/프로젝트 설정 가져오기
+          vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+          # 프로덕션 빌드
+          vercel build --prod --token=$VERCEL_TOKEN
+          # 사전 빌드 결과 배포
+          vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+
+      # ---------- Trigger Render Backend Deploy ----------
+      # 사전에 GitHub 리포지토리 Secrets에 아래 2개 등록:
+      # RENDER_API_KEY, RENDER_SERVICE_ID
+      - name: Trigger Render Deploy
+        if: ${{ secrets.RENDER_API_KEY && secrets.RENDER_SERVICE_ID }}
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+        run: |
+          curl -s -X POST \
+            -H "accept: application/json" \
+            -H "authorization: Bearer $RENDER_API_KEY" \
+            -H "content-type: application/json" \
+            https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys \
+            -d '{"clearCache": false}'

@@ -2,15 +2,16 @@
 # - 이메일 중복 체크, 회원가입
 # - 로그인 (비밀번호 검증, JWT 토큰 발급)
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, Depends
 from pydantic import EmailStr
+from typing import Union
 from ..repositories.user_repository import UserRepository
 from ..core.security import get_password_hash, verify_password, create_access_token, create_refresh_token
 from ..schemas.user_schema import TokenPair
 
 class AuthService:
-    def __init__(self, repo: UserRepository | None = None):
-        self.repo = repo or UserRepository()
+    def __init__(self, repo: UserRepository):
+        self.repo = repo
 
     async def register(self, email: EmailStr, password: str):
         existing = await self.repo.get_by_email(email)
@@ -27,3 +28,7 @@ class AuthService:
         access = create_access_token(str(user.id))
         refresh = create_refresh_token(str(user.id))
         return TokenPair(access_token=access, refresh_token=refresh)
+
+
+def get_auth_service(repo: UserRepository = Depends(UserRepository)) -> AuthService:
+    return AuthService(repo)

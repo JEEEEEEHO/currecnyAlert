@@ -10,7 +10,7 @@ from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
 import jwt
 
-from ..core.config import settings
+from .config import settings
 from ..models.user import User
 from beanie import PydanticObjectId
 

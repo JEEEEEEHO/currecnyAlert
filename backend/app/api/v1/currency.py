@@ -7,11 +7,14 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-from ....core.config import settings
-from ....core.security import get_current_user
-from ....models.user import User
-from ....models.notification import NotificationSetting
-from ....services.currency_service import get_latest_stat_or_live
+from typing import Annotated, Union
+
+from ...core.config import settings
+from ...core.security import get_current_user
+from ...models.user import User
+from ...models.notification import NotificationSetting
+from ...services.currency_service import get_latest_stat_or_live
+from beanie import PydanticObjectId
 
 router = APIRouter(tags=["currency"])
 
@@ -25,7 +28,7 @@ class LatestResponse(BaseModel):
     source: str
 
 @router.get("/currency/latest", response_model=LatestResponse, summary="현재 환율 + 3년 평균 반환")
-async def currency_latest(base: str | None = None, target: str | None = None):
+async def currency_latest(base: Union[str, None] = None, target: Union[str, None] = None):
     base = base or settings.DEFAULT_BASE_CURRENCY
     target = target or settings.DEFAULT_TARGET_CURRENCY
     data = await get_latest_stat_or_live(base, target)
