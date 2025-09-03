@@ -22,7 +22,6 @@ services:
       - MONGODB_URI=mongodb://mongo:27017/fx_alert
       - REDIS_URL=redis://redis:6379/0
       - CORS_ALLOW_ORIGINS=http://localhost:5173
-      - ALPHA_VANTAGE_API_KEY=ALPHA_VANTAGE_API_KEY #env에 key를 입력했음. 보안을 위해 docker-compose에는 직접 입력 안하는 방법이 없을까? 
     ports: ["8000:8000"]
     depends_on: [mongo, redis]
 
