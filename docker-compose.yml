@@ -17,11 +17,12 @@ services:
   backend:
     build: ./backend
     container_name: fx_backend
-    env_file: ./backend/.env.example
+    env_file: ./backend/.env
     environment:
       - MONGODB_URI=mongodb://mongo:27017/fx_alert
       - REDIS_URL=redis://redis:6379/0
       - CORS_ALLOW_ORIGINS=http://localhost:5173
+      - ALPHA_VANTAGE_API_KEY=ALPHA_VANTAGE_API_KEY #env에 key를 입력했음. 보안을 위해 docker-compose에는 직접 입력 안하는 방법이 없을까? 
     ports: ["8000:8000"]
     depends_on: [mongo, redis]
 
@@ -29,7 +30,7 @@ services:
     build: ./backend
     container_name: fx_celery_worker
     command: ["celery", "-A", "app.tasks.currency_tasks.celery_app", "worker", "-l", "INFO"]
-    env_file: ./backend/.env.example
+    env_file: ./backend/.env
     environment:
       - MONGODB_URI=mongodb://mongo:27017/fx_alert
       - REDIS_URL=redis://redis:6379/0
@@ -39,7 +40,7 @@ services:
     build: ./backend
     container_name: fx_celery_beat
     command: ["celery", "-A", "app.tasks.currency_tasks.celery_app", "beat", "-l", "INFO"]
-    env_file: ./backend/.env.example
+    env_file: ./backend/.env
     environment:
       - MONGODB_URI=mongodb://mongo:27017/fx_alert
       - REDIS_URL=redis://redis:6379/0
@@ -49,7 +50,7 @@ services:
     build: ./frontend
     container_name: fx_frontend
     environment:
-      - VITE_API_BASE_URL=http://localhost:8000/api/v1
+      - VITE_API_BASE_URL=http://backend:8000/api/v1
     ports: ["5173:80"]
     depends_on: [backend]
 

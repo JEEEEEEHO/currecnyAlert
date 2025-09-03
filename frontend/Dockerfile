@@ -2,7 +2,7 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package.json /app/package.json
-COPY package-lock.json /app/package-lock.json 2>/dev/null || true
+COPY package-lock.json /app/package-lock.json
 RUN npm i
 COPY . /app
 RUN npm run build

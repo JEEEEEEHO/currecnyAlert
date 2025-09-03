@@ -16,6 +16,7 @@ import os
 from .core.config import settings
 from .models.user import User
 from .models.notification import NotificationSetting
+from .services.currency_service import RateStat # RateStat 모델 임포트
 from .api.v1.auth import router as auth_router
 from .api.v1.currency import router as currency_router
 
@@ -41,7 +42,7 @@ app.add_middleware(
 async def app_init():
     client = AsyncIOMotorClient(settings.MONGODB_URI)
     db = client.get_default_database()
-    await init_beanie(database=db, document_models=[User, NotificationSetting])
+    await init_beanie(database=db, document_models=[User, NotificationSetting, RateStat])
     # 참고: RateStat(환율 통계) Document는 services/currency_service.py 내부에 정의됨.
 
 # 간단한 헬스체크

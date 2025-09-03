@@ -21,7 +21,10 @@ class Settings(BaseSettings):
 
     DEFAULT_BASE_CURRENCY: str = "USD"
     DEFAULT_TARGET_CURRENCY: str = "KRW"
-    CURRENCY_API_BASE: str = "https://api.exchangerate.host"
+    CURRENCY_API_BASE: str = "https://v6.exchangerate-api.com/v6"
+    CURRENCY_API_KEY: str # API 키 추가
+
+    ALPHA_VANTAGE_API_KEY: str
 
     REDIS_URL: str = "redis://localhost:6379/0"
     TIMEZONE: str = "Asia/Seoul"
