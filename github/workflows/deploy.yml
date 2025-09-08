@@ -72,17 +72,6 @@ jobs:
           vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
 
       # ---------- Trigger Render Backend Deploy ----------
-      # 사전에 GitHub 리포지토리 Secrets에 아래 2개 등록:
-      # RENDER_API_KEY, RENDER_SERVICE_ID
-      - name: Trigger Render Deploy
-        if: ${{ secrets.RENDER_API_KEY && secrets.RENDER_SERVICE_ID }}
-        env:
-          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
-        run: |
-          curl -s -X POST \
-            -H "accept: application/json" \
-            -H "authorization: Bearer $RENDER_API_KEY" \
-            -H "content-type: application/json" \
-            https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys \
-            -d '{"clearCache": false}'
+      # Render Web Service의 Auto-Deploy 기능을 사용하므로, GitHub Actions에서
+      # 별도로 배포를 트리거할 필요가 없습니다. GitHub에 푸시하면 Render가
+      # 변경 사항을 감지하여 자동으로 배포합니다.
