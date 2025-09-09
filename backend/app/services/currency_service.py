@@ -47,50 +47,49 @@ def _api_latest(base: str, target: str) -> float:
     return float(data["conversion_rates"][target])
 
 def _api_timeseries_avg_3y(base: str, target: str) -> float:
-    # Alpha Vantage API를 사용하여 3년치 시계열 데이터를 가져오고 평균을 계산합니다.
-    # 무료 플랜은 API 호출 제한이 있을 수 있습니다.
+    # exchangerate.host API를 사용하여 3년치 시계열 데이터를 가져오고 평균을 계산합니다.
     try:
-        # Alpha Vantage API 키를 로그로 출력하여 확인 (디버깅용)
-        print(f"Alpha Vantage API Key being used: {settings.ALPHA_VANTAGE_API_KEY[:5]}...{settings.ALPHA_VANTAGE_API_KEY[-5:]}") # 보안을 위해 앞뒤 5글자만 출력
-        # ForeignExchange 객체 생성 직전 로그 추가
-        print(f"[AlphaVantage] Attempting to initialize ForeignExchange with key.")
-        fx = ForeignExchange(key=settings.ALPHA_VANTAGE_API_KEY)
-        # 일별 환율 데이터 가져오기 (full outputsize로 지난 20년간의 데이터 가져옴)
-        data, _ = fx.get_currency_exchange_daily(from_symbol=base, to_symbol=target, outputsize='full')
-        
-        # Alpha Vantage API로부터 받은 원본 데이터 출력
-        # print(f"Alpha Vantage Raw Data for {base}/{target}: {data}")
-
-        # 데이터가 없을 경우 로그 추가
-        if not data:
-            print(f"[AlphaVantage] No data received from API for {base}/{target}. Check API key, network, or API limits.")
-            return 1250.0
-
-        df = pd.DataFrame.from_dict(data).T
-        df.index = pd.to_datetime(df.index)
-        df = df.sort_index()
-
         end_date = datetime.utcnow()
-        start_date = end_date - timedelta(days=3*365)
+        start_date = end_date - timedelta(days=3 * 365) # 3년치 데이터
 
-        # 3년치 데이터 필터링
-        df_3y = df.loc[start_date.strftime('%Y-%m-%d'):end_date.strftime('%Y-%m-%d')]
+        # exchangerate.host timeseries 엔드포인트 사용
+        # 예: https://api.exchangerate.host/timeseries?start_date=2021-01-01&end_date=2024-01-01&base=USD&symbols=KRW
+        url = (
+            f"https://api.exchangerate.host/timeseries?"
+            f"start_date={start_date.strftime('%Y-%m-%d')}&"
+            f"end_date={end_date.strftime('%Y-%m-%d')}&"
+            f"base={base}&symbols={target}"
+        )
         
-        # 3년치 필터링된 데이터 출력
-        print(f"Alpha Vantage 3-year Filtered Data for {base}/{target}: {df_3y}")
+        print(f"[exchangerate.host] Calling timeseries API: {url}")
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status() # HTTP 에러 발생 시 예외 발생
+        data = resp.json()
 
-        if not df_3y.empty:
-            # '4. close' 가격의 3년 평균 계산 (Alpha Vantage 필드명)
-            avg_rate = df_3y['4. close'].astype(float).mean()
-            print(f"Alpha Vantage: Successfully fetched data for {base}/{target}. Average: {avg_rate:.4f}")
-            return avg_rate
-        else:
-            print(f"Alpha Vantage: No 3-year data found for {base}/{target}. Returning dummy value.")
+        # API 응답에서 환율 데이터 추출
+        # data['rates']는 {'YYYY-MM-DD': {'SYMBOL': RATE}} 형태입니다.
+        rates = []
+        for date_str, rate_data in data.get('rates', {}).items():
+            if target in rate_data:
+                rates.append(rate_data[target])
+        
+        if not rates:
+            print(f"[exchangerate.host] No historical data received for {base}/{target}. Check API response or query parameters.")
             return 1250.0
+        
+        df = pd.DataFrame(rates, columns=['rate'])
+        avg_rate = df['rate'].astype(float).mean()
 
+        print(f"[exchangerate.host]: Successfully fetched historical data for {base}/{target}. Average: {avg_rate:.4f}")
+        return avg_rate
+
+    except requests.exceptions.RequestException as e:
+        # requests 라이브러리 관련 예외 처리 (네트워크 오류, HTTP 오류 등)
+        logger.error(f"[exchangerate.host]: Network or HTTP error fetching data for {base}/{target}. Message: {e}", exc_info=True)
+        return 1250.0
     except Exception as e:
-        # 예외 발생 시 상세한 오류 메시지와 스택 트레이스 출력
-        logger.error(f"Alpha Vantage: Error fetching data for {base}/{target}. Message: {e}", exc_info=True)
+        # 그 외 모든 예외 처리
+        logger.error(f"[exchangerate.host]: Error fetching or processing data for {base}/{target}. Message: {e}", exc_info=True)
         return 1250.0
 
 # ---- 이메일 ----
