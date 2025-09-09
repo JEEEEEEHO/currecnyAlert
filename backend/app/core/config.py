@@ -3,6 +3,7 @@
 # - 기본값을 제공하여 로컬 실행 편의성 확보
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+import os
 
 class Settings(BaseSettings):
     APP_NAME: str = "fx-alert"
@@ -35,6 +36,9 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     SMTP_FROM: str = "FX Alert <noreply@example.com>"
     SMTP_TLS: bool = True
+
+    # 캐시 TTL 설정 (초 단위). 기본값 1시간 (3600초)
+    CACHE_TTL_SECONDS: int = int(os.getenv("CACHE_TTL_SECONDS", 3600))
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

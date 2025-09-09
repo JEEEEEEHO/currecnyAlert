@@ -59,12 +59,11 @@ def _api_timeseries_avg_3y(base: str, target: str) -> float:
         data, _ = fx.get_currency_exchange_daily(from_symbol=base, to_symbol=target, outputsize='full')
         
         # Alpha Vantage API로부터 받은 원본 데이터 출력
-        print(f"Alpha Vantage Raw Data for {base}/{target}: {data}")
+        # print(f"Alpha Vantage Raw Data for {base}/{target}: {data}")
 
         # 데이터가 없을 경우 로그 추가
         if not data:
             print(f"[AlphaVantage] No data received from API for {base}/{target}. Check API key, network, or API limits.")
-            print(f"Alpha Vantage: No data found for {base}/{target}. Returning dummy value.")
             return 1250.0
 
         df = pd.DataFrame.from_dict(data).T
@@ -161,18 +160,28 @@ async def compute_store_and_notify(base: str | None = None, target: str | None =
     return stat
 
 async def get_latest_stat_or_live(base: str, target: str) -> dict:
-    # 최근 저장된 통계를 우선 반환하고, 없으면 즉시 계산 (API 호출)
+    # 최근 저장된 통계를 우선 반환하고, 없거나 오래되었으면 즉시 계산 (API 호출)
     latest = await RateStat.find({"base": base, "target": target}).sort(-RateStat.calculated_at).first_or_none()
+
+    # 캐시 유효 기간 (예: 1시간) 설정 - 환경 변수에서 가져옴
+    # NOTE: CACHE_TTL_SECONDS는 나중에 config.py에 추가될 것입니다.
+    cache_ttl_seconds = settings.CACHE_TTL_SECONDS # 초 단위
+
     if latest:
-        return {
-            "base": base,
-            "target": target,
-            "current_rate": latest.current_rate,
-            "avg_3y": latest.avg_3y,
-            "status": latest.status,
-            "last_updated": latest.calculated_at.isoformat(),
-            "source": "db-cache"
-        }
+        # 캐시 데이터가 유효한지 확인
+        # calculated_at은 UTC로 저장되므로, 현재 시간도 UTC로 비교해야 합니다.
+        time_since_last_update = (datetime.utcnow() - latest.calculated_at).total_seconds()
+        if time_since_last_update < cache_ttl_seconds:
+            print(f"[CurrencyService] Returning cached stat for {base}/{target}. Last updated {time_since_last_update:.0f} seconds ago.")
+            return {
+                "base": base,
+                "target": target,
+                "current_rate": latest.current_rate,
+                "avg_3y": latest.avg_3y,
+                "status": latest.status,
+                "last_updated": latest.calculated_at.isoformat(),
+                "source": "db-cache"
+            }
     # DB에 없으면 바로 계산
     print(f"[CurrencyService] No latest stat in DB. Calling _api_latest and _api_timeseries_avg_3y...")
     current = _api_latest(base, target)
