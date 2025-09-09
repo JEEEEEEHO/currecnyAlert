@@ -25,8 +25,6 @@ class Settings(BaseSettings):
     CURRENCY_API_BASE: str = "https://v6.exchangerate-api.com/v6"
     CURRENCY_API_KEY: str # API 키 추가
 
-    # ALPHA_VANTAGE_API_KEY: str 무료 제한 
-
     REDIS_URL: str = "redis://localhost:6379/0"
     TIMEZONE: str = "Asia/Seoul"
 

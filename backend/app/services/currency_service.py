@@ -12,7 +12,7 @@ from beanie import Document
 from pydantic import Field
 from beanie.operators import In
 import pandas as pd # Alpha Vantage 응답 처리를 위해 필요
-from alpha_vantage.foreignexchange import ForeignExchange # Alpha Vantage 클라이언트
+# from alpha_vantage.foreignexchange import ForeignExchange # Alpha Vantage 클라이언트 (더 이상 사용 안함)
 import logging # 로깅 추가
 
 from ..core.config import settings
