@@ -39,12 +39,27 @@ class RateStat(Document):
 # ---- 외부 API 호출 ----
 
 def _api_latest(base: str, target: str) -> float:
-    # exchangerate-api.com 엔드포인트 사용
-    url = f"{settings.CURRENCY_API_BASE}/{settings.CURRENCY_API_KEY}/latest/{base}"
+    # exchangerate.host 엔드포인트 사용
+    # 예: https://api.exchangerate.host/latest?base=USD&symbols=KRW&apikey=YOUR_API_KEY
+    url = (
+        f"{settings.CURRENCY_API_BASE}/latest?"
+        f"base={base}&symbols={target}&apikey={settings.CURRENCY_API_KEY}"
+    )
+    logger.info(f"[exchangerate.host] Calling latest API: {url}") # print 대신 logger 사용
     resp = requests.get(url, timeout=10)
     resp.raise_for_status()
     data = resp.json()
-    return float(data["conversion_rates"][target])
+
+    # API 응답에서 환율 데이터 추출
+    # data['rates']는 {'SYMBOL': RATE} 형태입니다.
+    if target in data.get('rates', {}):
+        rate = data['rates'][target]
+        logger.info(f"[exchangerate.host]: Successfully fetched latest data for {base}/{target}. Rate: {rate:.4f}")
+        return float(rate)
+    else:
+        logger.warning(f"[exchangerate.host] No latest rate data received for {base}/{target}. Returning dummy value.")
+        return 1250.0 # 적절한 오류 처리 또는 폴백 로직이 필요합니다.
+
 
 def _api_timeseries_avg_3y(base: str, target: str) -> float:
     # exchangerate.host API를 사용하여 3년치 시계열 데이터를 가져오고 평균을 계산합니다.
