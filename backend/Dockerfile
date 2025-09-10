@@ -17,4 +17,4 @@ COPY .env.example /app/.env.example
 
 # Uvicorn으로 FastAPI 실행 (환경파일은 docker-compose가 주입)
 # Render 환경에서는 $PORT 환경 변수를 사용하여 포트를 동적으로 할당받습니다.
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "$PORT"]
+CMD uvicorn app.main:app --host 0.0.0.0 --port $PORT
