@@ -53,15 +53,15 @@ def _api_timeseries_avg_3y(base: str, target: str) -> float:
         start_date = end_date - timedelta(days=3 * 365) # 3년치 데이터
 
         # exchangerate.host timeseries 엔드포인트 사용
-        # 예: https://api.exchangerate.host/timeseries?start_date=2021-01-01&end_date=2024-01-01&base=USD&symbols=KRW
+        # 예: https://api.exchangerate.host/timeseries?start_date=2021-01-01&end_date=2024-01-01&base=USD&symbols=KRW&apikey=YOUR_API_KEY
         url = (
-            f"https://api.exchangerate.host/timeseries?"
+            f"{settings.CURRENCY_API_BASE}/timeseries?"
             f"start_date={start_date.strftime('%Y-%m-%d')}&"
             f"end_date={end_date.strftime('%Y-%m-%d')}&"
-            f"base={base}&symbols={target}"
+            f"base={base}&symbols={target}&apikey={settings.CURRENCY_API_KEY}"
         )
         
-        print(f"[exchangerate.host] Calling timeseries API: {url}")
+        logger.info(f"[exchangerate.host] Calling timeseries API: {url}") # print 대신 logger 사용
         resp = requests.get(url, timeout=10)
         resp.raise_for_status() # HTTP 에러 발생 시 예외 발생
         data = resp.json()
@@ -74,13 +74,15 @@ def _api_timeseries_avg_3y(base: str, target: str) -> float:
                 rates.append(rate_data[target])
         
         if not rates:
-            print(f"[exchangerate.host] No historical data received for {base}/{target}. Check API response or query parameters.")
+            # 시계열 데이터가 없을 경우 경고 로그를 남기고, 임시 더미 값을 반환합니다.
+            # 실제 운영 환경에서는 적절한 오류 처리 (예: 예외 발생) 또는 폴백 로직이 필요합니다.
+            logger.warning(f"[exchangerate.host] No historical data received for {base}/{target}. Check API response or query parameters. Returning dummy value.")
             return 1250.0
         
         df = pd.DataFrame(rates, columns=['rate'])
         avg_rate = df['rate'].astype(float).mean()
 
-        print(f"[exchangerate.host]: Successfully fetched historical data for {base}/{target}. Average: {avg_rate:.4f}")
+        logger.info(f"[exchangerate.host]: Successfully fetched historical data for {base}/{target}. Average: {avg_rate:.4f}") # print 대신 logger 사용
         return avg_rate
 
     except requests.exceptions.RequestException as e:

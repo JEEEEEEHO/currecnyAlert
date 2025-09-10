@@ -4,6 +4,8 @@
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 import os
+from typing import Optional
+from pydantic import Field
 
 class Settings(BaseSettings):
     APP_NAME: str = "fx-alert"
@@ -22,8 +24,10 @@ class Settings(BaseSettings):
 
     DEFAULT_BASE_CURRENCY: str = "USD"
     DEFAULT_TARGET_CURRENCY: str = "KRW"
-    CURRENCY_API_BASE: str = "https://v6.exchangerate-api.com/v6"
-    CURRENCY_API_KEY: str # API 키 추가
+    # exchangerate.host API의 기본 URL입니다. 시계열 데이터를 포함한 모든 API 호출에 사용됩니다.
+    CURRENCY_API_BASE: str = "https://api.exchangerate.host"
+    # exchangerate.host API에 접근하기 위한 API 키입니다. .env 파일에 설정해야 합니다.
+    CURRENCY_API_KEY: str
 
     REDIS_URL: str = "redis://localhost:6379/0"
     TIMEZONE: str = "Asia/Seoul"
@@ -37,6 +41,9 @@ class Settings(BaseSettings):
 
     # 캐시 TTL 설정 (초 단위). 기본값 1시간 (3600초)
     CACHE_TTL_SECONDS: int = int(os.getenv("CACHE_TTL_SECONDS", 3600))
+
+    # exchangerate.host API Key
+    EXCHANGERATE_API_KEY: Optional[str] = Field(None, env="EXCHANGERATE_API_KEY")
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
