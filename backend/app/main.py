@@ -50,6 +50,10 @@ async def app_init():
 async def root():
     return {"ok": True, "app": "fx-alert", "time": datetime.utcnow().isoformat()}
 
+@app.get("/health") # Render 헬스 체크용 엔드포인트 추가
+async def health_check():
+    return {"status": "ok", "app": "fx-alert", "version": "1.0.0"}
+
 # API v1 라우터 등록
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(currency_router, prefix="/api/v1")
